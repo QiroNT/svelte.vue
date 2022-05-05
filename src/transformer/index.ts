@@ -156,6 +156,7 @@ export class Transformer {
     const importsFromVue = new Set<string>()
     const props = new Set<string>()
     const propDefaults: Record<string, string> = {}
+    const emits = new Set<string>()
 
     let currentContext: {
       refs: string[]
@@ -184,6 +185,35 @@ export class Transformer {
               const name = decl.id.name
               if (currentContext.refs.includes(name))
                 currentContext.refs.splice(currentContext.refs.indexOf(name), 1)
+              if (currentContext.props.includes(name))
+                currentContext.props.splice(currentContext.props.indexOf(name), 1)
+            }
+          }
+          // replace assignments to props with emit
+          else if (node.type === 'AssignmentExpression') {
+            if (node.left.type === 'Identifier') {
+              const name = node.left.name
+              if (currentContext.props.includes(name)) {
+                // emit('update:<name>', <right>)
+                this.replace({
+                  type: 'CallExpression',
+                  loc: node.loc,
+                  callee: {
+                    type: 'Identifier',
+                    loc: node.left.loc,
+                    name: 'emit',
+                  },
+                  arguments: [
+                    {
+                      type: 'Literal',
+                      loc: node.left.loc,
+                      value: `update:${name}`,
+                    },
+                    node.right,
+                  ],
+                } as any)
+                emits.add(`update:${name}`)
+              }
             }
           }
           else if (node.type === 'Identifier') {
@@ -299,6 +329,9 @@ export class Transformer {
         walkRegularNode(node)
       }
     }
+
+    if (emits.size)
+      content = `const emit = defineEmits([${[...emits].map(v => JSON.stringify(v)).join(', ')}]);\n${content}`
 
     if (props.size) {
       let defProps = 'const {\n'

@@ -1,5 +1,5 @@
 <script>
-  export const itemContent = 'item'
+  export let itemContent = 'item'
 
   let count = 0
 
@@ -8,6 +8,7 @@
   $: if (count >= 10) {
     alert(`count is dangerously high!`)
     count = 9
+    itemContent = 'item2'
   }
 
   function handleClick() {

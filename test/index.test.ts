@@ -17,12 +17,14 @@ describe('index', () => {
       const {
         itemContent = 'item',
       } = defineProps([\\"itemContent\\"]);
+      const emit = defineEmits([\\"update:itemContent\\"]);
       const count = shallowRef(0);
       const items = computed(() => itemContent.repeat(count.value));
       watch(() => [count.value, ], () => {
       if (count.value >= 10) {
         alert(\`count is dangerously high!\`);
         count.value = 9;
+        emit(\\"update:itemContent\\", 'item2');
       }
       });
       function handleClick() {
