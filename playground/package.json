@@ -1,0 +1,23 @@
+{
+  "name": "playground",
+  "version": "0.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "vite --open",
+    "build": "vite build",
+    "serve": "vite preview"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-vue": "^2.3.2",
+    "splitpanes": "^3.1.1",
+    "unocss": "^0.32.12",
+    "vite": "^2.9.8"
+  },
+  "dependencies": {
+    "@types/codemirror": "^5.60.5",
+    "@vueuse/core": "^8.4.1",
+    "codemirror": "^5.65.3",
+    "codemirror-theme-vars": "^0.1.1",
+    "vue": "^3.2.33"
+  }
+}

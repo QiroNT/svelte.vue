@@ -1,3 +1,7 @@
+import type { CompileOptions } from 'svelte/types/compiler/interfaces'
+
 export interface Options {
-  // define your plugin options here
+  svelte?: {
+    compilerOptions?: CompileOptions
+  }
 }
