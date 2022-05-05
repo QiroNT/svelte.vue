@@ -262,59 +262,55 @@ export class Transformer {
         }
       }
       else if (node.type === 'LabeledStatement' && node.label.name === '$') {
-        // $: variable -> computed
+        // $: variable -> shallowRef + watch
         if (node.body.type === 'ExpressionStatement'
-        && node.body.expression.type === 'AssignmentExpression'
-        && node.body.expression.operator === '=') {
+         && node.body.expression.type === 'AssignmentExpression'
+         && node.body.expression.operator === '=') {
           const expr = node.body.expression
-          content += `const ${expr.left.name} = computed(() => `
-          walkRegularNode(expr.right)
-          content += ');\n'
+          content += `const ${expr.left.name} = shallowRef();\n`
           currentContext.refs.push(expr.left.name)
-          importsFromVue.add('computed')
+          importsFromVue.add('shallowRef')
         }
         // $: block -> watch
-        else {
-          content += 'watch(() => ['
-          walk(node, {
-            enter(node: any, parent, key, index) {
-              if (node.type === 'BlockStatement') {
-                const newContext = {
-                  refs: [...currentContext.refs],
-                  props: [...currentContext.props],
-                }
-                contextStack.push(currentContext)
-                currentContext = newContext
+        content += 'watch(() => ['
+        walk(node, {
+          enter(node: any, parent, key, index) {
+            if (node.type === 'BlockStatement') {
+              const newContext = {
+                refs: [...currentContext.refs],
+                props: [...currentContext.props],
               }
-              else if (node.type === 'VariableDeclaration') {
-                for (const decl of node.declarations) {
-                  const name = decl.id.name
-                  if (currentContext.refs.includes(name))
-                    currentContext.refs.splice(currentContext.refs.indexOf(name), 1)
-                  else if (currentContext.props.includes(name))
-                    currentContext.props.splice(currentContext.props.indexOf(name), 1)
-                }
+              contextStack.push(currentContext)
+              currentContext = newContext
+            }
+            else if (node.type === 'VariableDeclaration') {
+              for (const decl of node.declarations) {
+                const name = decl.id.name
+                if (currentContext.refs.includes(name))
+                  currentContext.refs.splice(currentContext.refs.indexOf(name), 1)
+                else if (currentContext.props.includes(name))
+                  currentContext.props.splice(currentContext.props.indexOf(name), 1)
               }
-              else if (parent?.type === 'AssignmentExpression' && key === 'left') {
-                this.skip()
-              }
-              else if (node.type === 'Identifier') {
-                if (currentContext.refs.includes(node.name))
-                  content += `${node.name}.value, `
-                else if (currentContext.props.includes(node.name))
-                  content += `${node.name}, `
-              }
-            },
-            leave(node: any, parent, key, index) {
-              if (node.type === 'BlockStatement')
-                currentContext = contextStack.pop()!
-            },
-          })
-          content += '], () => {\n'
-          walkRegularNode(node.body)
-          content += '\n});\n'
-          importsFromVue.add('watch')
-        }
+            }
+            else if (parent?.type === 'AssignmentExpression' && key === 'left') {
+              this.skip()
+            }
+            else if (node.type === 'Identifier') {
+              if (currentContext.refs.includes(node.name))
+                content += `${node.name}.value, `
+              else if (currentContext.props.includes(node.name))
+                content += `${node.name}, `
+            }
+          },
+          leave(node: any, parent, key, index) {
+            if (node.type === 'BlockStatement')
+              currentContext = contextStack.pop()!
+          },
+        })
+        content += '], () => {\n'
+        walkRegularNode(node.body)
+        content += '\n}, { immediate: true });\n'
+        importsFromVue.add('watch')
       }
       // export variable -> defineProps
       else if (node.type === 'ExportNamedDeclaration') {

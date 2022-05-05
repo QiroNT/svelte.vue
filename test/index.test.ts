@@ -13,20 +13,23 @@ describe('index', () => {
 
     expect(t.getSFC()).toMatchInlineSnapshot(`
       "<script setup>
-      import { shallowRef, computed, watch } from 'vue';
+      import { shallowRef, watch } from 'vue';
       const {
         itemContent = 'item',
       } = defineProps([\\"itemContent\\"]);
       const emit = defineEmits([\\"update:itemContent\\"]);
       const count = shallowRef(0);
-      const items = computed(() => itemContent.repeat(count.value));
+      const items = shallowRef();
+      watch(() => [itemContent, count.value, ], () => {
+      items.value = itemContent.repeat(count.value);
+      }, { immediate: true });
       watch(() => [count.value, ], () => {
       if (count.value >= 10) {
         alert(\`count is dangerously high!\`);
         count.value = 9;
         emit(\\"update:itemContent\\", 'item2');
       }
-      });
+      }, { immediate: true });
       function handleClick() {
         count.value += 1;
       }
