@@ -48,3 +48,28 @@ import HelloWorld from './HelloWorld.svelte.vue'
   <HelloWorld msg="Hello Svelte!" />
 </template>
 ```
+
+<details>
+<summary>Compiled Output</summary>
+
+```vue
+<!-- HelloWorld.svelte.vue -->
+<script setup>
+import { shallowRef, watch } from 'vue'
+const {
+  msg = 'Hello World!',
+} = defineProps(['msg'])
+const msg2 = shallowRef()
+watch(() => [msg, ], () => {
+  msg2.value = msg.replace('Svelte', 'Vue')
+}, { immediate: true })
+</script>
+
+<template>
+  <h1>{{ msg }}</h1>
+  <h2>{{ msg2 }}</h2>
+</template>
+```
+
+</details>
+<p></p>
