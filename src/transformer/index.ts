@@ -159,8 +159,10 @@ export class Transformer {
 
     let currentContext: {
       refs: string[]
+      props: string[]
     } = {
       refs: [],
+      props: [],
     }
     const contextStack: typeof currentContext[] = []
 
@@ -172,6 +174,7 @@ export class Transformer {
           if (node.type === 'BlockStatement') {
             const newContext = {
               refs: [...currentContext.refs],
+              props: [...currentContext.props],
             }
             contextStack.push(currentContext)
             currentContext = newContext
@@ -184,6 +187,8 @@ export class Transformer {
             }
           }
           else if (node.type === 'Identifier') {
+            if (key === 'property')
+              return
             if (currentContext.refs.includes(node.name)) {
               this.replace({
                 type: 'MemberExpression',
@@ -238,18 +243,54 @@ export class Transformer {
           currentContext.refs.push(expr.left.name)
           importsFromVue.add('computed')
         }
-        // $: block -> watchEffect
+        // $: block -> watch
         else {
-          content += 'watchEffect(() => {'
+          content += 'watch(() => ['
+          walk(node, {
+            enter(node: any, parent, key, index) {
+              if (node.type === 'BlockStatement') {
+                const newContext = {
+                  refs: [...currentContext.refs],
+                  props: [...currentContext.props],
+                }
+                contextStack.push(currentContext)
+                currentContext = newContext
+              }
+              else if (node.type === 'VariableDeclaration') {
+                for (const decl of node.declarations) {
+                  const name = decl.id.name
+                  if (currentContext.refs.includes(name))
+                    currentContext.refs.splice(currentContext.refs.indexOf(name), 1)
+                  else if (currentContext.props.includes(name))
+                    currentContext.props.splice(currentContext.props.indexOf(name), 1)
+                }
+              }
+              else if (parent?.type === 'AssignmentExpression' && key === 'left') {
+                this.skip()
+              }
+              else if (node.type === 'Identifier') {
+                if (currentContext.refs.includes(node.name))
+                  content += `${node.name}.value, `
+                else if (currentContext.props.includes(node.name))
+                  content += `${node.name}, `
+              }
+            },
+            leave(node: any, parent, key, index) {
+              if (node.type === 'BlockStatement')
+                currentContext = contextStack.pop()!
+            },
+          })
+          content += '], () => {\n'
           walkRegularNode(node.body)
-          content += '});\n'
-          importsFromVue.add('watchEffect')
+          content += '\n});\n'
+          importsFromVue.add('watch')
         }
       }
       // export variable -> defineProps
       else if (node.type === 'ExportNamedDeclaration') {
         for (const decl of node.declaration.declarations) {
           props.add(decl.id.name)
+          currentContext.props.push(decl.id.name)
           if (decl.init)
             propDefaults[decl.id.name] = raw.slice(decl.init.start, decl.init.end)
         }
@@ -262,7 +303,7 @@ export class Transformer {
     if (props.size) {
       let defProps = 'const {\n'
       for (const prop of props) {
-        defProps += prop
+        defProps += `  ${prop}`
         if (prop in propDefaults)
           defProps += ` = ${propDefaults[prop]}`
 

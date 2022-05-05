@@ -13,8 +13,18 @@ describe('index', () => {
 
     expect(t.getSFC()).toMatchInlineSnapshot(`
       "<script setup>
-      import { shallowRef } from 'vue';
+      import { shallowRef, computed, watch } from 'vue';
+      const {
+        itemContent = 'item',
+      } = defineProps([\\"itemContent\\"]);
       const count = shallowRef(0);
+      const items = computed(() => itemContent.repeat(count.value));
+      watch(() => [count.value, ], () => {
+      if (count.value >= 10) {
+        alert(\`count is dangerously high!\`);
+        count.value = 9;
+      }
+      });
       function handleClick() {
         count.value += 1;
       }
@@ -23,8 +33,15 @@ describe('index', () => {
       <template>
       
       <button @click=\\"handleClick\\">
-        Clicked {{count}} {{count === 1 ? 'time' : 'times'}}
-      </button></template>"
+        Clicked {{count}}
+        {{count === 1 ? 'time' : 'times'}}
+      </button>
+      
+      <template v-if=\\"count >= 5\\"><p>count is pretty high.</p></template><template v-else><p>count is not so high.</p></template>
+      
+      <ul>
+        <template v-if=\\"items.length>0\\"><template v-for=\\"item in items\\" :key=\\"item\\"><li>{{item}}</li></template></template><template v-else><li>No items</li></template>
+      </ul></template>"
     `)
   })
 })
